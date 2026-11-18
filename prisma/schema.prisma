@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+enum ContentState {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(EDITOR)
+  createdAt    DateTime @default(now())
+}
+
+model Setting {
+  key   String @id
+  value String @default("")
+}
+
+model Show {
+  id           String            @id @default(cuid())
+  slug         String            @unique
+  icon         String            @default("🎙")
+  color        String            @default("#a78bfa")
+  imageUrl     String?
+  active       Boolean           @default(true)
+  sortOrder    Int               @default(0)
+  translations ShowTranslation[]
+  slots        ScheduleSlot[]
+  episodes     Episode[]
+  podcasts     PodcastEpisode[]
+  createdAt    DateTime          @default(now())
+}
+
+model ShowTranslation {
+  id          String @id @default(cuid())
+  showId      String
+  locale      String
+  title       String
+  description String @default("")
+  host        String @default("")
+  show        Show   @relation(fields: [showId], references: [id], onDelete: Cascade)
+
+  @@unique([showId, locale])
+}
+
+model ScheduleSlot {
+  id              String  @id @default(cuid())
+  showId          String
+  dayOfWeek       Int
+  startMinute     Int
+  durationMinutes Int     @default(15)
+  repeatHours     String  @default("9,12,15,18")
+  isRerun         Boolean @default(false)
+  enabled         Boolean @default(true)
+  show            Show    @relation(fields: [showId], references: [id], onDelete: Cascade)
+
+  @@index([dayOfWeek, startMinute])
+}
+
+model ScheduleException {
+  id        String  @id @default(cuid())
+  date      String
+  startTime String
+  endTime   String?
+  showId    String?
+  note      String?
+  enabled   Boolean @default(true)
+
+  @@index([date, startTime])
+}
+
+model Episode {
+  id           String               @id @default(cuid())
+  showId       String
+  slug         String               @unique
+  audioUrl     String?
+  imageUrl     String?
+  publishedAt  DateTime?
+  state        ContentState         @default(DRAFT)
+  airDate      String?
+  episodeNo    Int?
+  imageAlt     String               @default("")
+  host         String               @default("")
+  slotMinute   Int?
+  skip         Boolean              @default(false)
+  showFrom     DateTime?
+  show         Show                 @relation(fields: [showId], references: [id], onDelete: Cascade)
+  translations EpisodeTranslation[]
+  createdAt    DateTime             @default(now())
+
+  @@index([airDate])
+}
+
+model EpisodeTranslation {
+  id          String  @id @default(cuid())
+  episodeId   String
+  locale      String
+  title       String
+  description String  @default("")
+  episode     Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@unique([episodeId, locale])
+}
+
+model Post {
+  id           String            @id @default(cuid())
+  slug         String            @unique
+  imageUrl     String?
+  imageAlt     String            @default("")
+  imageCredit  String            @default("")
+  author       String            @default("")
+  bodyImages   String            @default("[]")
+  date         String?
+  position     Int?
+  state        ContentState      @default(DRAFT)
+  publishedAt  DateTime?
+  createdAt    DateTime          @default(now())
+  translations PostTranslation[]
+}
+
+model PostTranslation {
+  id     String @id @default(cuid())
+  postId String
+  locale String
+  title  String
+  lead   String @default("")
+  body   String @default("")
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, locale])
+}
+
+model DayFeature {
+  id           String                  @id @default(cuid())
+  kind         String
+  date         String
+  imageUrl     String?
+  state        ContentState            @default(DRAFT)
+  showFrom     DateTime?
+  translations DayFeatureTranslation[]
+  createdAt    DateTime                @default(now())
+
+  @@unique([kind, date])
+}
+
+model DayFeatureTranslation {
+  id        String     @id @default(cuid())
+  featureId String
+  locale    String
+  title     String
+  text      String     @default("")
+  feature   DayFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@unique([featureId, locale])
+}
+
+model WeeklyGameChoice {
+  id        String @id @default(cuid())
+  weekStart String @unique
+  game      String
+}
+
+// Strana „O nama“: studenti, ranije angažovani i uredništvo.
+model Person {
+  id           String              @id @default(cuid())
+  kind         String // STUDENT | FORMER | CHIEF | EDITOR
+  imageUrl     String?
+  yearFrom     Int?
+  yearTo       Int?
+  sortOrder    Int                 @default(0)
+  active       Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  translations PersonTranslation[]
+}
+
+model PersonTranslation {
+  id       String @id @default(cuid())
+  personId String
+  locale   String
+  name     String
+  role     String @default("")
+  shows    String @default("")
+  bio      String @default("")
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, locale])
+}
+
+// Podkast: snimljene emisije (audio fajl ide na naš server, u uploads/podkast).
+model PodcastEpisode {
+  id           String                    @id @default(cuid())
+  showId       String
+  audioUrl     String
+  imageUrl     String?
+  date         String?
+  episodeNo    Int?
+  durationSec  Int?
+  published    Boolean                   @default(false)
+  createdAt    DateTime                  @default(now())
+  show         Show                      @relation(fields: [showId], references: [id], onDelete: Cascade)
+  translations PodcastEpisodeTranslation[]
+}
+
+model PodcastEpisodeTranslation {
+  id          String         @id @default(cuid())
+  episodeId   String
+  locale      String
+  title       String
+  description String         @default("")
+  episode     PodcastEpisode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@unique([episodeId, locale])
+}

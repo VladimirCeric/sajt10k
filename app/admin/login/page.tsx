@@ -1,0 +1,2 @@
+import {loginAction} from '../actions';
+export default function Login(){return <main className="max-w-md mx-auto mt-28 panel"><h1 className="text-3xl font-bold mb-6">Radio 10K · uređivanje sajta</h1><form action={loginAction}><div className="field"><label>Email</label><input name="email" type="email" required/></div><div className="field"><label>Lozinka</label><input name="password" type="password" required/></div><button className="btn">Prijavi se</button></form></main>}

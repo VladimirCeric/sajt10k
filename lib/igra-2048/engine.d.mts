@@ -1,0 +1,15 @@
+export type Dir = 'left' | 'right' | 'up' | 'down';
+export type Tile = { id: number; v: number; r: number; c: number; born?: boolean; merged?: boolean };
+export type Ghost = { id: number; v: number; r: number; c: number };
+export type GameState = { tiles: Tile[]; ghosts: Ghost[]; score: number; nextId: number; won: boolean; keepGoing: boolean; over: boolean };
+export const SIZE: number;
+export const WIN_VALUE: number;
+export function emptyCells(tiles: Tile[]): { r: number; c: number }[];
+export function canMove(tiles: Tile[]): boolean;
+export function maxTile(tiles: Tile[]): number;
+export function newGame(rand: () => number): GameState;
+export function move(state: GameState, dir: Dir, rand: () => number): { state: GameState; moved: boolean; gained: number };
+export function keyToDir(key: string, code?: string): Dir | null;
+export function stripTransient(state: GameState): GameState;
+export function serialize(state: GameState): string;
+export function restore(raw: unknown): GameState | null;

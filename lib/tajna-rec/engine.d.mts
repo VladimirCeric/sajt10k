@@ -1,0 +1,11 @@
+export type Script = 'cyr' | 'lat';
+export type Mark = 'correct' | 'present' | 'absent';
+export const alphabet: string;
+export const toLatin: Record<string,string>;
+export function display(word:string, script:Script):string;
+export function score(guess:string,answer:string):Mark[];
+export function dayKey(date?:Date):string;
+export function dayIndex(key:string):number;
+export function dailyAnswer(schedule:string[],key:string):string;
+export function hintCandidates(guesses:string[],answer:string):number[];
+export function normalizeKey(key:string):string|null;

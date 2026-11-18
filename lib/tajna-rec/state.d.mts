@@ -1,0 +1,10 @@
+import type { Script } from './engine.mjs';
+export type GameState = {guesses:string[];input:string[];hint:{index:number;letter:string}|null};
+export function fresh():GameState;
+export function isDone(state:GameState,answer:string):boolean;
+export function restore(raw:unknown,answer:string,allowed:Set<string>):GameState;
+export function typeLetter(state:GameState,letter:string):GameState;
+export function erase(state:GameState):GameState;
+export function reveal(state:GameState,answer:string,randomIndex:number):GameState;
+export function choosePractice(schedule:string[],current:string,daily:string,used:string[],randomIndex:number):{word:string;used:string[]};
+export function dateLabel(key:string,script:Script):string;
