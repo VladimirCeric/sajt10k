@@ -32,7 +32,7 @@ Igre su deo sajta (kod), pa se novi folder kopira u projekat i upiše u jedan sp
 cd ~/Downloads/radio10k-sajt
 npm run dev
 ```
-Otvori `http://localhost:3000/admin/igra-nedelje`, izaberi novu igru za ovu nedelju, pa `http://localhost:3000/sr-latn` — igra treba da bude u kartici „Igra nedelje“. Brza provera bez menjanja izbora: `http://localhost:3000/sr-latn?igra=nova-igra`.
+Otvori `http://localhost:3000/admin/igra-nedelje`, izaberi novu igru za ovu nedelju, pa `http://localhost:3000/sr-latn` — igra treba da bude u kartici „Igra nedelje“. (Adresa `?igra=...` više ne postoji; igra se proverava izborom u adminu.)
 
 Ako igra ne radi, najčešće fali neki fajl iz `lib/` ili `public/` pa ga treba dokopirati.
 

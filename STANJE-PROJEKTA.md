@@ -25,7 +25,21 @@ Ovaj fajl služi da se posao može nastaviti i posle dužeg vremena, sa bilo koj
 - Potpisi slika u „Levo od Albukerkija" dolaze iz polja „Opis slike"; na ćirilici se prevode automatski.
 - Vreme: Open-Meteo (potrebna veza ka api.open-meteo.com), obavezan navod „Prognoza: Open-Meteo".
 
+## Igre nedelje (registar: `lib/games.tsx`)
+Svaka igra je klijentska komponenta u `components/<igra>/` (komponenta, `.module.css`, `Dialog.tsx`) i upisuje se u `WEEKLY_GAMES`; admin „Igra nedelje", nedeljna rotacija i kartica na početnoj to preuzimaju automatski. Nova igra ne traži Prisma migraciju. Uputstvo: `UPUTSTVO-NOVA-IGRA.md`.
+- Ranije: Tajna reč (dnevna), Zvukožder, 2048.
+- Parovi (`parovi`): igra pamćenja, tri veličine table.
+- $ifr@ (`kombinacija`): pogađanje šifre od 4 simbola, težina je broj pokušaja.
+- Sudoku (`sudoku`): 9×9, težina je broj ponuđenih brojeva (42/33/26); generator je u `lib/sudoku/engine.ts`.
+- Zbirovi (`zbirovi`): precrtavanje brojeva do zadatih zbirova, 4×4/6×6/8×8; generator u `lib/zbirovi/engine.ts`.
+- Ping-pong (`pong`): protiv računara, prvi do 7; canvas.
+- Osvajanje galaksije (`galaksija`): pucačina sa emoji protivnicima, nivoi bez kraja, svaki peti je meteor; canvas.
+- Super-prase (`super-prase`): trčanje i skakanje, prase jede hranu, izbegava instrumente; brdašca, ciglene platforme, retko srce za život; beskonačna igra; canvas.
+- Zajedničko: najbolji rezultat i napredak čuvaju se u `localStorage` na uređaju; ćirilica/latinica po `locale`; emoji se crtaju fontom uređaja (izgled se razlikuje po uređaju); igre sa canvas-om ne koriste dodatne biblioteke.
+- Kod canvas igara koristi se `touch-action:none` na polju (na telefonu se tu ne skroluje).
+
 ## Šta nije isprobano
+- Nove igre (Parovi, $ifr@, Sudoku, Zbirovi, Ping-pong, Osvajanje galaksije, Super-prase) proverene su u Chrome-u i na računaru Vladimira; Safari/iPhone samo delimično.
 - Instalacija na pravom serveru, nginx, `pg_dump`/`pg_restore` prenos, `migrate deploy` na praznoj bazi (nema Postgresa u radnom okruženju pomoćnika).
 
 ## Šta se čuva van GitHuba (bekap)
