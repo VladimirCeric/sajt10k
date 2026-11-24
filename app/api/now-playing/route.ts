@@ -18,6 +18,7 @@ export async function GET(request:Request){
  const options=Object.fromEntries(settings.map(s=>[s.key,s.value]));
  const streamUrl=options.stream_url??'';
  const metadataUrl=options.stream_metadata_url || icecastStatusUrl(streamUrl);
+ const fallbackArtwork=options.station_cover_url || '/radio-cover.svg';
  let track=null;
  let icecastOnline=false;
  if(metadataUrl){
@@ -26,13 +27,13 @@ export async function GET(request:Request){
    if(result){
     icecastOnline=true;
     const artwork=await lookupArtwork(result.artist,result.title);
-    track={...result,artwork:artwork || options.station_cover_url || '/radio-cover.svg'};
+    track={...result,artwork:artwork || fallbackArtwork};
    }
   } catch { /* Keep schedule and player working if Icecast is down. */ }
  }
  return NextResponse.json({
   current:current?{title:current.title,icon:current.icon,image:current.image,start:current.start,end:current.end}:null,
   next:next?{title:next.title,start:next.start}:null,
-  track,icecastOnline,fallbackArtwork:options.station_cover_url || '/radio-cover.svg'
+  track,icecastOnline,fallbackArtwork
  },{headers:{'Cache-Control':'public, max-age=0, s-maxage=15, stale-while-revalidate=15'}});
 }
