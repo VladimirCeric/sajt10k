@@ -2,7 +2,7 @@ import {NextResponse} from 'next/server';
 import {db} from '@/lib/db';
 import {belgradeParts,expandDay} from '@/lib/schedule';
 import {localeOf} from '@/lib/i18n';
-import {icecastStatusUrl,lookupArtwork,readIcecast} from '@/lib/icecast';
+import {icecastStatusUrl,readIcecast} from '@/lib/icecast';
 export const dynamic='force-dynamic';
 export async function GET(request:Request){
  const locale=localeOf(new URL(request.url).searchParams.get('locale')??'sr-cyrl');
@@ -26,8 +26,7 @@ export async function GET(request:Request){
    const result=await readIcecast(metadataUrl,streamUrl);
    if(result){
     icecastOnline=true;
-    const artwork=await lookupArtwork(result.artist,result.title);
-    track={...result,artwork:artwork || fallbackArtwork};
+    track={...result,artwork:null};
    }
   } catch { /* Keep schedule and player working if Icecast is down. */ }
  }
