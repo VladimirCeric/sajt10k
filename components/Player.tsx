@@ -3,8 +3,6 @@ import {useEffect,useRef,useState} from 'react';
 import {usePathname} from 'next/navigation';
 import {Pause,Volume2,VolumeX} from 'lucide-react';
 type NowPlaying={track:{artist:string;title:string;artwork:string|null;listeners:number|null}|null;current:{title:string;icon:string;image:string|null}|null;next:{title:string}|null;icecastOnline:boolean;fallbackArtwork:string};
-const normalized=(v:string)=>v.normalize('NFKD').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
-const httpsUrl=(value:string|null|undefined)=>value?.startsWith('https://')?value:null;
 /** Naslov pesme: ako ne staje u polje, polako klizi napred-nazad; inače stoji. */
 function Marq({text}:{text:string}){
  const o=useRef<HTMLSpanElement>(null),i=useRef<HTMLSpanElement>(null),[d,setD]=useState(0);
@@ -17,14 +15,13 @@ export default function Player({src,label,empty}:{src:string;label:string;empty:
  const [playing,setPlaying]=useState(false),[volume,setVolume]=useState(0.75),[error,setError]=useState('');
  const lastVol=useRef(0.75);const [muted,setMuted]=useState(false);
  const lastLoggedTitle=useRef('');
- const artworkLookupId=useRef(0);
  function toggleMute(){setMuted(m=>!m)}
- const [now,setNow]=useState<NowPlaying|null>(null),[imageError,setImageError]=useState(false),[clientArtwork,setClientArtwork]=useState<string|null>(null);
+ const [now,setNow]=useState<NowPlaying|null>(null),[imageError,setImageError]=useState(false);
  useEffect(()=>{if(audio.current)audio.current.volume=volume},[volume]);
  useEffect(()=>{if(audio.current)audio.current.muted=muted},[muted]);
  // Podkast i radio ne sviraju istovremeno.
  useEffect(()=>{const f=()=>audio.current?.pause();window.addEventListener('r10k-podcast',f);return()=>window.removeEventListener('r10k-podcast',f)},[]);
- useEffect(()=>{setImageError(false);setClientArtwork(null)},[now?.track?.artist,now?.track?.title]);
+ useEffect(()=>{setImageError(false)},[now?.track?.artist,now?.track?.title,now?.track?.artwork]);
  useEffect(()=>{
   let active=true;
   const load=async()=>{
@@ -44,27 +41,6 @@ export default function Player({src,label,empty}:{src:string;label:string;empty:
   lastLoggedTitle.current=title;
   console.info('[player] now playing',{title,artist:now?.track?.artist||null,artwork:now?.track?.artwork||null,programImage:now?.current?.image||null,fallback:now?.fallbackArtwork||'/radio-cover.svg'});
  },[now?.track?.title,now?.track?.artist,now?.track?.artwork,now?.current?.title,now?.current?.image,now?.fallbackArtwork]);
- useEffect(()=>{
-  const artist=now?.track?.artist?.trim()||'';
-  const title=now?.track?.title?.trim()||'';
-  if(!artist||!title)return;
-  const id=++artworkLookupId.current;
-  const endpoint='https://itunes.apple.com/search?'+new URLSearchParams({term:`${artist} ${title}`,entity:'song',limit:'8'});
-  const run=async()=>{
-   try{
-    const response=await fetch(endpoint,{cache:'no-store'});
-    if(!response.ok||id!==artworkLookupId.current)return;
-    const data=await response.json() as {results?:Array<{artistName?:string;trackName?:string;artworkUrl100?:string}>};
-    const match=data.results?.find(item=>normalized(item.artistName??'')===normalized(artist)&&normalized(item.trackName??'')===normalized(title));
-    const loose=match??data.results?.find(item=>{const a=normalized(item.artistName??'');const t=normalized(item.trackName??'');const ta=normalized(artist);const tt=normalized(title);return (a===ta||a.includes(ta)||ta.includes(a))&&(t===tt||t.includes(tt)||tt.includes(t));});
-    const pick=loose??data.results?.[0];
-    const artwork=httpsUrl(pick?.artworkUrl100?.replace(/\/100x100(bb)?\./,'/600x600bb.'));
-    if(id!==artworkLookupId.current)return;
-    setClientArtwork(artwork||null);
-   }catch{/* Keep fallback artwork if iTunes lookup fails in browser */}
-  };
-  void run();
- },[now?.track?.artist,now?.track?.title]);
  async function toggle(){
   if(!audio.current)return;
   if(!audio.current.paused){audio.current.pause();return}
@@ -74,7 +50,7 @@ export default function Player({src,label,empty}:{src:string;label:string;empty:
  if(pathname?.startsWith('/admin'))return null;
  const track=now?.track;
  const fallback=now?.fallbackArtwork||'/radio-cover.svg';
- const cover=imageError?fallback:(clientArtwork||track?.artwork||now?.current?.image||fallback);
+ const cover=imageError?fallback:(track?.artwork||now?.current?.image||fallback);
  return <div className="pl">
   <audio ref={audio} src={src||undefined} preload="none" onError={()=>{setPlaying(false);setError('Problem sa audio streamom')}} onPause={()=>setPlaying(false)} onPlaying={()=>{setPlaying(true);window.dispatchEvent(new Event('r10k-radio'))}}/>
   <div className="pl-in">

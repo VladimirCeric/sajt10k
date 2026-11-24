@@ -4,13 +4,38 @@ import {belgradeParts,expandDay} from '@/lib/schedule';
 import {localeOf} from '@/lib/i18n';
 import {icecastStatusUrl,readIcecast} from '@/lib/icecast';
 export const dynamic='force-dynamic';
+const asObject=(v:unknown):Record<string,unknown>|null=>v&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:null;
+const asText=(v:unknown)=>typeof v==='string'?v.trim():'';
+function maybeUrl(v:unknown,base:string):string|null{
+ const raw=asText(v);
+ if(!raw)return null;
+ try{const u=new URL(raw,base);return /^https?:$/.test(u.protocol)?u.toString():null}catch{return null}
+}
+function pickArtworkFromJson(data:unknown,base:string):string|null{
+ const keys=['artwork','cover','image','art','albumArt','album_art','artwork_url','cover_url','image_url'];
+ const queue:unknown[]=[data];
+ while(queue.length){
+  const current=queue.shift();
+  if(Array.isArray(current)){for(const item of current)queue.push(item);continue}
+  const obj=asObject(current);if(!obj)continue;
+  for(const key of keys){const hit=maybeUrl(obj[key],base);if(hit)return hit}
+  for(const value of Object.values(obj))if(value&&typeof value==='object')queue.push(value);
+ }
+ return null;
+}
+async function readArtworkJson(url:string):Promise<string|null>{
+ const response=await fetch(url,{signal:AbortSignal.timeout(3500),next:{revalidate:12},headers:{Accept:'application/json'}});
+ if(!response.ok)return null;
+ const data:unknown=await response.json();
+ return pickArtworkFromJson(data,url);
+}
 export async function GET(request:Request){
  const locale=localeOf(new URL(request.url).searchParams.get('locale')??'sr-cyrl');
  const now=belgradeParts(new Date());
  const [slots,exceptions,settings]=await Promise.all([
    db.scheduleSlot.findMany({include:{show:{include:{translations:true}}}}),
    db.scheduleException.findMany({where:{date:now.date}}),
-   db.setting.findMany({where:{key:{in:['stream_url','stream_metadata_url','station_cover_url']}}})
+   db.setting.findMany({where:{key:{in:['stream_url','stream_metadata_url','station_cover_url','stream_artwork_url']}}})
  ]);
  const schedule=expandDay(slots,now.date,now.day,locale,exceptions);
  const current=schedule.find(e=>e.start<=now.minute&&e.end>now.minute);
@@ -18,15 +43,20 @@ export async function GET(request:Request){
  const options=Object.fromEntries(settings.map(s=>[s.key,s.value]));
  const streamUrl=options.stream_url??'';
  const metadataUrl=options.stream_metadata_url || icecastStatusUrl(streamUrl);
+ const artworkUrl=options.stream_artwork_url||'';
  const fallbackArtwork=options.station_cover_url || '/radio-cover.svg';
+ let artworkFromJson:string|null=null;
  let track=null;
  let icecastOnline=false;
+ if(artworkUrl){
+  try{artworkFromJson=await readArtworkJson(artworkUrl);}catch{/* Artwork JSON is optional. */}
+ }
  if(metadataUrl){
   try {
    const result=await readIcecast(metadataUrl,streamUrl);
    if(result){
     icecastOnline=true;
-    track={...result,artwork:null};
+    track={...result,artwork:result.artwork||artworkFromJson};
    }
   } catch { /* Keep schedule and player working if Icecast is down. */ }
  }
