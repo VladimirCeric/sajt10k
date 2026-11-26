@@ -1,7 +1,18 @@
 /** Icecast 2.4+ public /status-json.xsl reader (no Icecast credentials required). */
 export type Track = { artist: string; title: string; artwork: string | null; listeners: number | null };
 type Source = Record<string, unknown>;
-const asString = (v: unknown) => typeof v === 'string' ? v.trim() : '';
+function maybeFixMojibake(value: string): string {
+  // Typical UTF-8 bytes misread as Latin-1/Windows-1252 (e.g. "Ä", "Ã¡").
+  if (!/[ÃÄÅÐÑÂâ]/.test(value)) return value;
+  try {
+    const repaired = Buffer.from(value, 'latin1').toString('utf8');
+    if (!repaired || repaired.includes('\uFFFD')) return value;
+    return repaired;
+  } catch {
+    return value;
+  }
+}
+const asString = (v: unknown) => typeof v === 'string' ? maybeFixMojibake(v).trim() : '';
 function webUrl(value: string): string | null {
   try { const u = new URL(value.startsWith('//') ? `https:${value}` : value); return /^https?:$/.test(u.protocol) ? u.toString() : null; } catch { return null; }
 }

@@ -1,22 +1,46 @@
 'use client';
 import {useEffect,useState} from 'react';
 import WeatherIcon from '@/components/WeatherIcon';
-import type {IconName} from '@/lib/weather';
-
-type Payload={weather:{temp:string;label:string;icon:IconName;text:string}|null};
+import {iconOf,inScript,pickRule,tempText,textOf,type W} from '@/lib/weather';
 
 const stroke={fill:'none',stroke:'#c3c8de',strokeWidth:1.3,strokeLinecap:'round' as const,strokeLinejoin:'round' as const};
+const WEATHER_URL='https://api.open-meteo.com/v1/forecast?latitude=44.76&longitude=20.48&current=temperature_2m,apparent_temperature,relative_humidity_2m,is_day,precipitation,snowfall,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m&hourly=precipitation_probability&forecast_hours=4&timezone=Europe%2FBelgrade&wind_speed_unit=kmh';
+
+function parseWeather(json:unknown):W|null{
+ try{
+  const j=json as {current?:Record<string,unknown>;hourly?:{precipitation_probability?:unknown[]}};
+  const c=j.current??{};
+  const p=(j.hourly?.precipitation_probability??[]).filter((x):x is number=>typeof x==='number');
+  const w:W={
+   temp:Number(c.temperature_2m),
+   feels:Number(c.apparent_temperature),
+   hum:Number(c.relative_humidity_2m),
+   precip:Number(c.precipitation??0),
+   snow:Number(c.snowfall??0),
+   cloud:Number(c.cloud_cover),
+   gust:Number(c.wind_gusts_10m??0),
+   wind:Number(c.wind_speed_10m??0),
+   code:Number(c.weather_code),
+   day:Number(c.is_day)===1,
+   pnext:Math.max(0,...p.slice(1,4))
+  };
+  return [w.temp,w.feels,w.hum,w.cloud,w.code].every(Number.isFinite)?w:null;
+ }catch{return null}
+}
 
 export default function HomeWeather({locale,label,dateText}:{locale:string;label:string;dateText:string}){
- const [data,setData]=useState<Payload['weather']>(null);
+ const [data,setData]=useState<{temp:string;label:string;icon:ReturnType<typeof iconOf>['icon'];text:string}|null>(null);
  useEffect(()=>{
   let active=true;
   const load=async()=>{
    try{
-    const response=await fetch(`/api/weather?locale=${encodeURIComponent(locale)}`,{cache:'no-store'});
+    const response=await fetch(WEATHER_URL,{cache:'no-store'});
     if(!response.ok)return;
-    const json=await response.json() as Payload;
-    if(active)setData(json.weather);
+    const wx=parseWeather(await response.json());
+    if(!wx||!active)return;
+    const icon=iconOf(wx);
+    const text=inScript(textOf(pickRule(wx),{}),locale);
+    setData({temp:tempText(wx.temp),label:inScript(icon.label,locale),icon:icon.icon,text});
    }catch{/* Keep date-only fallback if weather fetch fails */}
   };
   void load();
