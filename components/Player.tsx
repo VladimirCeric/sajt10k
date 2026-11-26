@@ -2,9 +2,10 @@
 import {useEffect,useRef,useState} from 'react';
 import {usePathname} from 'next/navigation';
 import {Pause,Volume2,VolumeX} from 'lucide-react';
-type NowPlaying={track:{artist:string;title:string;artwork:string|null;listeners:number|null}|null;current:{title:string;icon:string;image:string|null}|null;next:{title:string}|null;icecastOnline:boolean;fallbackArtwork:string};
+type NowPlaying={track:{artist:string;title:string;artwork:string|null;listeners:number|null;durationSec:number|null;progressSec:number|null}|null;current:{title:string;icon:string;image:string|null}|null;next:{title:string}|null;icecastOnline:boolean;fallbackArtwork:string};
 const normalized=(v:string)=>v.normalize('NFKD').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 const httpsUrl=(value:string|null|undefined)=>value?.startsWith('https://')?value:null;
+const fmt=(s:number)=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 /** Naslov pesme: ako ne staje u polje, polako klizi napred-nazad; inače stoji. */
 function Marq({text}:{text:string}){
  const o=useRef<HTMLSpanElement>(null),i=useRef<HTMLSpanElement>(null),[d,setD]=useState(0);
@@ -47,7 +48,9 @@ export default function Player({src,label,empty}:{src:string;label:string;empty:
  useEffect(()=>{
   const artist=now?.track?.artist?.trim()||'';
   const title=now?.track?.title?.trim()||'';
-  if(!artist||!title||now?.track?.artwork)return;
+  const duration=now?.track?.durationSec??null;
+  const isShowMeta=(duration!==null&&duration>=20*60)||(!artist&&duration!==null&&duration>=10*60);
+  if(!artist||!title||now?.track?.artwork||isShowMeta)return;
   const id=++artworkLookupId.current;
   const endpoint='https://itunes.apple.com/search?'+new URLSearchParams({term:`${artist} ${title}`,entity:'song',limit:'8'});
   const run=async()=>{
@@ -64,7 +67,7 @@ export default function Player({src,label,empty}:{src:string;label:string;empty:
    }catch{/* Keep fallback artwork if iTunes lookup fails in browser */}
   };
   void run();
- },[now?.track?.artist,now?.track?.title,now?.track?.artwork]);
+ },[now?.track?.artist,now?.track?.title,now?.track?.artwork,now?.track?.durationSec]);
  async function toggle(){
   if(!audio.current)return;
   if(!audio.current.paused){audio.current.pause();return}
@@ -73,8 +76,12 @@ export default function Player({src,label,empty}:{src:string;label:string;empty:
  }
  if(pathname?.startsWith('/admin'))return null;
  const track=now?.track;
+ const duration=track?.durationSec??null;
+ const progress=track?.progressSec??null;
+ const isShowMeta=(duration!==null&&duration>=20*60)||(!track?.artist&&duration!==null&&duration>=10*60);
+ const timing=duration!==null?`${progress!==null?`${fmt(progress)} / `:''}${fmt(duration)}`:'';
  const fallback=now?.fallbackArtwork||'/logo-radio-10k-player.jpg';
- const cover=imageError?fallback:(track?.artwork||clientArtwork||now?.current?.image||fallback);
+ const cover=imageError?fallback:(isShowMeta?(now?.current?.image||fallback):(track?.artwork||clientArtwork||now?.current?.image||fallback));
  return <div className="pl">
   <audio ref={audio} src={src||undefined} preload="none" onError={()=>{setPlaying(false);setError('Problem sa audio streamom')}} onPause={()=>setPlaying(false)} onPlaying={()=>{setPlaying(true);window.dispatchEvent(new Event('r10k-radio'))}}/>
   <div className="pl-in">
@@ -85,7 +92,7 @@ export default function Player({src,label,empty}:{src:string;label:string;empty:
     <div className="pl-txt">
      <span className="pl-live" data-on={playing}><span className="a"><b>10k</b></span><span className="b">● UŽIVO</span></span>
      <Marq text={track?.title||now?.current?.title||label}/>
-     {(track?.artist||(track?.title&&now?.current))&&<span className="pl-sub">{track?.artist}{track?.artist&&now?.current?' · ':''}{now?.current?`U programu: ${now.current.title}`:''}</span>}
+     {(track?.artist||timing)&&<span className="pl-sub">{track?.artist||''}{track?.artist&&timing?' · ':''}{timing}</span>}
      {error&&<p className="pl-err">{error}</p>}
     </div>
    </div>

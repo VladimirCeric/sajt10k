@@ -1,5 +1,5 @@
 /** Icecast 2.4+ public /status-json.xsl reader (no Icecast credentials required). */
-export type Track = { artist: string; title: string; artwork: string | null; listeners: number | null };
+export type Track = { artist: string; title: string; artwork: string | null; listeners: number | null; durationSec: number | null; progressSec: number | null };
 type Source = Record<string, unknown>;
 function maybeFixMojibake(value: string): string {
   // Typical UTF-8 bytes misread as Latin-1/Windows-1252 (e.g. "Ä", "Ã¡").
@@ -13,6 +13,21 @@ function maybeFixMojibake(value: string): string {
   }
 }
 const asString = (v: unknown) => typeof v === 'string' ? maybeFixMojibake(v).trim() : '';
+function asNumber(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string') {
+    const n = Number(v.trim());
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+function pickNumber(source: Source, keys: string[]): number | null {
+  for (const key of keys) {
+    const n = asNumber(source[key]);
+    if (n !== null && n >= 0) return n;
+  }
+  return null;
+}
 function webUrl(value: string): string | null {
   try { const u = new URL(value.startsWith('//') ? `https:${value}` : value); return /^https?:$/.test(u.protocol) ? u.toString() : null; } catch { return null; }
 }
@@ -49,11 +64,15 @@ function parseTrack(source: Source): Track {
     title = raw.slice(index + 3).trim();
   }
   const listeners = Number(source.listeners);
+  const durationSec = pickNumber(source,['duration','duration_sec','track_duration','song_duration','length','len']);
+  const progressSec = pickNumber(source,['elapsed','progress','position','played','offset']);
   return {
     artist,
     title,
     artwork: sourceArtwork(source),
-    listeners: source.listeners === undefined || !Number.isFinite(listeners) ? null : listeners
+    listeners: source.listeners === undefined || !Number.isFinite(listeners) ? null : listeners,
+    durationSec,
+    progressSec: progressSec!==null&&durationSec!==null?Math.min(progressSec,durationSec):progressSec
   };
 }
 
