@@ -10,8 +10,7 @@ import {stripMarkers} from '@/lib/translit';
 import ProgramTable from '@/components/ProgramTable';
 import GameCard from '@/components/GameCard';
 import TodayProgram,{type TodayItem} from '@/components/TodayProgram';
-import WeatherIcon from '@/components/WeatherIcon';
-import {getWeather,iconOf,pickRule,textOf,parseOverrides,WEATHER_KEY,inScript,tempText} from '@/lib/weather';
+import HomeWeather from '@/components/HomeWeather';
 import {db} from '@/lib/db';import {localeOf,localized,ui} from '@/lib/i18n';import {belgradeParts,expandDay,localDateOffset} from '@/lib/schedule';
 export const dynamic='force-dynamic';
 
@@ -34,8 +33,6 @@ export default async function Home({params,searchParams}:{params:Promise<{locale
  const extraEps=episodes.filter(e=>!slotShows.has(e.showId)&&!e.skip);
  const extraShows=extraEps.length?await db.show.findMany({where:{id:{in:extraEps.map(e=>e.showId)}},include:{translations:true}}):[];
  const featWhere={...liveWhere(now)};
- const [wx,wxRow]=await Promise.all([getWeather(),db.setting.findUnique({where:{key:WEATHER_KEY}})]);
- const wxText=wx?inScript(textOf(pickRule(wx),parseOverrides(wxRow?.value)),locale):undefined;
  const [special,night,choice]=await Promise.all([
   db.dayFeature.findFirst({where:{kind:'special',date:bp.date,...featWhere},include:{translations:true}}),
   db.dayFeature.findFirst({where:{kind:'night',date:{lte:bp.date},...featWhere},orderBy:{date:'desc'},include:{translations:true}}),
@@ -74,8 +71,7 @@ export default async function Home({params,searchParams}:{params:Promise<{locale
   <section id="danas" aria-labelledby="danas-h" className="s-today">
    <div className="sg s-today-grid">
     <TodayProgram items={items} initial={initial} t={{title:t.today,hint:t.todayHint,group:t.todayGroup,next:t.nextShow,empty:t.noToday}}/>
-    {wx?<Info k={t.nowIn} v={`${tempText(wx.temp)} · ${inScript(iconOf(wx).label,locale)}`} d={dateText} x={wxText} src={<a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">{locale==='sr-cyrl'?'Прогноза':'Prognoza'}: Open-Meteo</a>} icon={<WeatherIcon name={iconOf(wx).icon}/>}/>
-    :<Info k={t.nowIn} v={dateText} d="" icon={<svg width="44" height="44" viewBox="0 0 24 24" {...stroke} aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.1 11 3.5 3.5 0 0 0 7 18z"/></svg>}/>}
+    <HomeWeather locale={locale} label={t.nowIn} dateText={dateText}/>
     {special&&<Info k={t.special} v={localized(special.translations,locale)?.title??''} d={localized(special.translations,locale)?.text??''} icon={<svg width="44" height="44" viewBox="0 0 24 24" {...stroke} aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>}/>}
     {night&&<Info k={t.night} v={localized(night.translations,locale)?.title??''} d={localized(night.translations,locale)?.text??''} icon={<svg width="44" height="44" viewBox="0 0 24 24" {...stroke} aria-hidden="true"><path d="M9 3.5a8.5 8.5 0 1 0 11.5 11.5A9.5 9.5 0 0 1 9 3.5z"/></svg>}/>}
    </div>
