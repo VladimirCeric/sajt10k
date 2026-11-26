@@ -44,7 +44,7 @@ export async function GET(request:Request){
  const streamUrl=options.stream_url??'';
  const metadataUrl=options.stream_metadata_url || icecastStatusUrl(streamUrl);
  const artworkUrl=options.stream_artwork_url||'';
- const fallbackArtwork=options.station_cover_url || '/radio-cover.svg';
+ const fallbackArtwork=options.station_cover_url || '/logo-radio-10k-player.jpg';
  let artworkFromJson:string|null=null;
  let track=null;
  let icecastOnline=false;

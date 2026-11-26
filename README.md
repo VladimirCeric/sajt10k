@@ -64,7 +64,7 @@ Open `/admin/settings` and configure:
 
 - **HTTPS audio stream URL**: the actual playable Icecast mount, e.g. `https://radio.example.com/live.mp3`.
 - **Icecast JSON URL**: `https://radio.example.com/status-json.xsl`. Leave blank to derive it from the stream's HTTPS origin.
-- **Fallback album cover URL**: optional HTTPS image; built-in `/radio-cover.svg` is used if blank.
+- **Fallback album cover URL**: optional HTTPS image; built-in `/logo-radio-10k-player.jpg` is used if blank.
 
 The `/api/now-playing` endpoint reads Icecast's public JSON (`icestats.source`) server-side, supports one or several mounts, and returns `track`, `current` scheduled show, and `next` show. The player refreshes every 30 seconds without interrupting live audio. If Icecast returns `Artist - Title` in `title`, the string is parsed; if separate `artist` is present it is used. Artwork is looked up by **exact artist and track title** using the public iTunes Search API; if there is no verified match, the station fallback image is used. Artwork lookups are optional, cached (positive 24h, negative 6h per server process), and may be unavailable due to provider restrictions. No album art is embedded in Icecast's standard JSON response. The player uses ordinary HTML images and does not require Next remote image configuration.
 

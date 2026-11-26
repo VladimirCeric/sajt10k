@@ -42,7 +42,7 @@ export default function Player({src,label,empty}:{src:string;label:string;empty:
   const title=now?.track?.title||now?.current?.title||'';
   if(!title||title===lastLoggedTitle.current)return;
   lastLoggedTitle.current=title;
-  console.info('[player] now playing',{title,artist:now?.track?.artist||null,artwork:now?.track?.artwork||null,programImage:now?.current?.image||null,fallback:now?.fallbackArtwork||'/radio-cover.svg'});
+  console.info('[player] now playing',{title,artist:now?.track?.artist||null,artwork:now?.track?.artwork||null,programImage:now?.current?.image||null,fallback:now?.fallbackArtwork||'/logo-radio-10k-player.jpg'});
  },[now?.track?.title,now?.track?.artist,now?.track?.artwork,now?.current?.title,now?.current?.image,now?.fallbackArtwork]);
  useEffect(()=>{
   const artist=now?.track?.artist?.trim()||'';
@@ -73,7 +73,7 @@ export default function Player({src,label,empty}:{src:string;label:string;empty:
  }
  if(pathname?.startsWith('/admin'))return null;
  const track=now?.track;
- const fallback=now?.fallbackArtwork||'/radio-cover.svg';
+ const fallback=now?.fallbackArtwork||'/logo-radio-10k-player.jpg';
  const cover=imageError?fallback:(track?.artwork||clientArtwork||now?.current?.image||fallback);
  return <div className="pl">
   <audio ref={audio} src={src||undefined} preload="none" onError={()=>{setPlaying(false);setError('Problem sa audio streamom')}} onPause={()=>setPlaying(false)} onPlaying={()=>{setPlaying(true);window.dispatchEvent(new Event('r10k-radio'))}}/>
@@ -81,7 +81,7 @@ export default function Player({src,label,empty}:{src:string;label:string;empty:
    <div className={'pl-eqbg'+(playing?' on':'')} aria-hidden="true">{Array.from({length:150},(_,i)=><i key={i}/>)}</div>
 <button aria-label={playing?'Pauziraj radio':'Pusti radio'} onClick={toggle} className="pl-play">{playing?<Pause size={24} fill="currentColor"/>:<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>}</button>
    <div className="pl-info">
-    <img src={cover} alt="" className="pl-cover" onError={e=>{console.warn('[player] artwork load failed',{failedSrc:e.currentTarget.src,title:track?.title||now?.current?.title||null,artist:track?.artist||null});if(e.currentTarget.src.endsWith('/radio-cover.svg'))return;setImageError(true)}}/>
+    <img src={cover} alt="" className="pl-cover" onError={e=>{console.warn('[player] artwork load failed',{failedSrc:e.currentTarget.src,title:track?.title||now?.current?.title||null,artist:track?.artist||null});if(e.currentTarget.src.endsWith('/logo-radio-10k-player.jpg'))return;setImageError(true)}}/>
     <div className="pl-txt">
      <span className="pl-live" data-on={playing}><span className="a"><b>10k</b></span><span className="b">● UŽIVO</span></span>
      <Marq text={track?.title||now?.current?.title||label}/>
