@@ -2,7 +2,6 @@
  * SPISAK IGARA NEDELJE — jedino mesto koje treba izmeniti kad stigne nova igra.
  * Odavde se automatski pune: izbor u adminu („Igra nedelje“), smena po nedeljama i kartica na naslovnoj.
  * (Tajna reč je dnevna igra i nije u ovom spisku.)
- * Uputstvo: UPUTSTVO-NOVA-IGRA.md
  */
 import type {ComponentType} from 'react';
 import Zvukozder from '@/components/zvukozder/Zvukozder';

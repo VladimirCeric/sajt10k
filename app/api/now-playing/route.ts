@@ -3,6 +3,8 @@ import {db} from '@/lib/db';
 import {belgradeParts,expandDay} from '@/lib/schedule';
 import {localeOf} from '@/lib/i18n';
 import {icecastStatusUrl,readIcecast} from '@/lib/icecast';
+import {readdir} from 'fs/promises';
+import path from 'path';
 export const dynamic='force-dynamic';
 const asObject=(v:unknown):Record<string,unknown>|null=>v&&typeof v==='object'&&!Array.isArray(v)?v as Record<string,unknown>:null;
 const asText=(v:unknown)=>typeof v==='string'?v.trim():'';
@@ -28,6 +30,42 @@ async function readArtworkJson(url:string):Promise<string|null>{
  if(!response.ok)return null;
  const data:unknown=await response.json();
  return pickArtworkFromJson(data,url);
+}
+const IMG_EXT=/\.(jpe?g|png|webp)$/i;
+const normalize=(v:string)=>v.normalize('NFKD').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+let imageIndexCache:{at:number;rows:Array<{norm:string;url:string}>}|null=null;
+async function localArtworkIndex():Promise<Array<{norm:string;url:string}>>{
+ if(imageIndexCache&&Date.now()-imageIndexCache.at<60_000)return imageIndexCache.rows;
+ const dir=path.join(process.cwd(),'uploads','radiodj');
+ try{
+  const files=await readdir(dir,{withFileTypes:true});
+  const rows=files.filter(f=>f.isFile()&&IMG_EXT.test(f.name)).map(f=>({
+   norm:normalize(f.name.replace(IMG_EXT,'')),
+   url:`/uploads/radiodj/${f.name}`
+  }));
+  imageIndexCache={at:Date.now(),rows};
+  return rows;
+ }catch{return []}
+}
+async function localArtworkFor(artist:string,title:string):Promise<string|null>{
+ const index=await localArtworkIndex();
+ if(!index.length)return null;
+ const a=normalize(artist||'');
+ const t=normalize(title||'');
+ const full=normalize([artist,title].filter(Boolean).join(' - '));
+ const compact=normalize([artist,title].filter(Boolean).join(' '));
+ const candidates=[full,compact,t].filter(Boolean);
+ for(const c of candidates){
+  const exact=index.find(x=>x.norm===c);
+  if(exact)return exact.url;
+  const loose=index.find(x=>x.norm.includes(c)||c.includes(x.norm));
+  if(loose)return loose.url;
+ }
+ if(a&&t){
+  const pair=index.find(x=>x.norm.includes(a)&&x.norm.includes(t));
+  if(pair)return pair.url;
+ }
+ return null;
 }
 export async function GET(request:Request){
  const locale=localeOf(new URL(request.url).searchParams.get('locale')??'sr-cyrl');
@@ -56,7 +94,8 @@ export async function GET(request:Request){
    const result=await readIcecast(metadataUrl,streamUrl);
    if(result){
     icecastOnline=true;
-    track={...result,artwork:result.artwork||artworkFromJson};
+    const artworkLocal=await localArtworkFor(result.artist,result.title);
+    track={...result,artwork:artworkLocal||result.artwork||artworkFromJson};
    }
   } catch { /* Keep schedule and player working if Icecast is down. */ }
  }
